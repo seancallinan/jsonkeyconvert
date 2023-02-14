@@ -1,0 +1,69 @@
+﻿@page "/"
+@using System.Text.Json
+@using System.Text
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Convert</PageTitle>
+
+<textarea rows="20" class="form-control" @bind="Input" placeholder="Paste the content of appsettings.json here">
+    {
+     "RootConfiguration": "abc",
+     "Nested": { "Element": "a", "List": ["item1", "item2"] }
+    }
+</textarea>
+<br />
+<button class="btn btn-success" disabled="@(Input.Trim().Length == 0)" @onclick="DoConvert">Convert</button>
+
+@if (!string.IsNullOrWhiteSpace(Output))
+{
+    <hr/>
+    <br/>
+    <pre>@Output</pre>
+}
+
+@code {
+
+    private string Input { get; set; } = @"{
+     ""RootConfiguration"": ""abc"",
+     ""Nested"": { ""Element"": ""a"", ""List"": [""item1"", ""item2""] }
+}";
+    private string Output { get; set; } = string.Empty;
+    
+
+    private async Task DoConvert()
+    {
+
+        if (Input.Trim().Length == 0) return;
+
+        var builder = new ConfigurationBuilder();
+        var stream = new MemoryStream(Input.Length);
+        var streamWriter = new StreamWriter(stream);
+        await streamWriter.WriteAsync(Input);
+        await streamWriter.FlushAsync();
+        stream.Position = 0;
+
+        builder.AddJsonStream(stream);
+
+        try
+        {
+            var configRoot = builder.Build();
+
+            var sb = new StringBuilder();
+            const string format = "- {0}=\"{1}\"";
+            foreach (var (key, value) in configRoot.AsEnumerable().Where(x => !string.IsNullOrEmpty(x.Value)).OrderBy(x => x.Key))
+            {
+                var key2 = key.Replace(":", "__");
+                sb.AppendFormat(format, key2, value);
+                sb.AppendLine();
+            }
+
+            Output = sb.ToString();
+
+        }
+        catch (JsonException)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Invalid JSON was provided");
+        }
+    }
+
+}
