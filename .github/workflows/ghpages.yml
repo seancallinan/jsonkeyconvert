@@ -15,6 +15,12 @@ jobs:
       - name: Publish app
         run: bash publish.sh
         # You can use cd before if your project is in a subfolder
+        
+      - name: Rewrite base href
+        uses: SteveSandersonMS/ghaction-rewrite-base-href@v1
+        with:
+          html_path: ${{ env.PUBLISH_DIR }}/index.html
+          base_href: /JsonKeyConvert/
 
       - name: GitHub Pages
         if: success() && github.ref == 'refs/heads/main'
